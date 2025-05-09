@@ -35,7 +35,14 @@ router.get('/', async (req, res, next) => {
         // Task 3: Fetch all secondChanceItems
         const secondChanceItems = await collection.find({}).toArray();
 
-        // Task 4: Return the secondChanceItems
+        // Add full image URL to each item
+        const baseUrl = 'http://localhost:3060/images/';
+        secondChanceItems.forEach(item => {
+            if (item.imageName) {
+                item.imageUrl = `${baseUrl}${item.imageName}`;
+            }
+        });
+
         res.json(secondChanceItems);
     } catch (e) {
         logger.console.error('oops something went wrong', e);
@@ -56,22 +63,25 @@ router.post('/', upload.single('file'), async (req, res, next) => {
         let secondChanceItem = req.body;
 
         // Task 4: Get the last id, increment it by 1, and set it to the new secondChanceItem
-        const lastItemQuery = await collection.find().sort({ 'id': -1 }).limit(1);
-        await lastItemQuery.forEach(item => {
-            secondChanceItem.id = (parseInt(item.id) + 1).toString();
-        });
+        const lastItemQuery = await collection.find().sort({ id: -1 }).limit(1).toArray();
+        if (lastItemQuery.length > 0) {
+            secondChanceItem.id = (parseInt(lastItemQuery[0].id) + 1).toString();
+        } else {
+            secondChanceItem.id = "1"; // Default to 1 if no items exist
+        }
 
         // Task 5: Set the current date in the new item
         const date_added = Math.floor(new Date().getTime() / 1000);
         secondChanceItem.date_added = date_added;
 
         // Task 6: Add the secondChanceItem to the database
-        secondChanceItem = await collection.insertOne(secondChanceItem);
+        const result = await collection.insertOne(secondChanceItem);
 
-        // Task 7: Upload its image to the images directory
-        // The image is already uploaded by multer to the specified directory
-
-        res.status(201).json(secondChanceItem.ops[0]);
+        // Task 7: Respond with the inserted item
+        res.status(201).json({
+            ...secondChanceItem,
+            _id: result.insertedId, // Include the MongoDB-generated ID
+        });
     } catch (e) {
         next(e);
     }
