@@ -133,3 +133,4 @@ dmypy.json
 .pyre/
 secondChance-frontend/package-lock.json
 secondChance-backend/util/import-mongo/package-lock.json
+package-lock.json
